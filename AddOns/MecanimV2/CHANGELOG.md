@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic
 Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] – 2026-5-30
+
+### Improved
+
+-   Improved stack trace reporting when something bad happens during an update
+
 ## [0.1.6] – 2026-4-12
 
 *Internal compatibility changes only*

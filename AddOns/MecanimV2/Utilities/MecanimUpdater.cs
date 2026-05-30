@@ -23,7 +23,7 @@ namespace Latios.Mecanim
                                   float deltaTime,
                                   int maxStateMachineIterations = 32)
         {
-            using var allocator = threadStackAllocator.CreateChildAllocator();
+            var allocator = threadStackAllocator.CreateChildAllocator();
 
             transitionEvents.Clear();
             clipEvents.Clear();
@@ -254,6 +254,8 @@ namespace Latios.Mecanim
             ApplyInertialBlend(ref controller, skeleton, scaledDeltaTime, isVeryFirstUpdate, startedNewInertialBlend, newInertialBlendDuration);
 
             skeleton.EndSamplingAndSync();
+
+            allocator.Dispose();
         }
 
         private static void UndoRootMotionDeltaTimeScaling(OptimizedSkeletonAspect skeleton, float deltaTime)
