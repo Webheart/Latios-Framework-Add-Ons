@@ -43,7 +43,7 @@ namespace Latios.Navigator.Systems
                                                                                             ref state)
             };
             state.Dependency = job.ScheduleByRef(state.Dependency);
-            job.TransformAspectParallelChunkHandle.ScheduleChunkGrouping(state.Dependency);
+            state.Dependency = job.TransformAspectParallelChunkHandle.ScheduleChunkGrouping(state.Dependency);
             state.Dependency = job.GetTransformsScheduler().ScheduleParallel(state.Dependency);
         }
 

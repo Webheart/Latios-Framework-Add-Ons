@@ -19,9 +19,9 @@ Add the following to `LatiosBootstrap`:
 
 ```csharp
 // In LatiosbakingBootstrap:
-Latios.Navigator.NavBakingBootstrap.InstallNavBakers(ref context);
+Latios.Navigator.NavigatorBakingBootstrap.InstallNavigatorBakers(ref context);
 // In LatiosBootstrap:
-Latios.Navigator.NavBoostrap.InstallNav(world);
+Latios.Navigator.NavigatorBoostrap.InstallNavigator(world);
 ```
 
 ## Usage
