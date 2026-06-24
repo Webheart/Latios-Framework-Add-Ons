@@ -20,7 +20,9 @@ namespace Latios.Anna.Systems
             GetOrCreateAndAddManagedSystem<ConstraintWritingSuperSystem>();
             GetOrCreateAndAddUnmanagedSystem<SolveSystem>();
             GetOrCreateAndAddUnmanagedSystem<IntegrateRigidBodiesSystem>();
+#if LATIOS_ADDON_SHOCKWAVE
             GetOrCreateAndAddUnmanagedSystem<BuildWorldCollisionAspectSystem>();
+#endif
         }
     }
 
