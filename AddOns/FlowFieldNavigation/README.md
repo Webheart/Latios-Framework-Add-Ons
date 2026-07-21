@@ -91,6 +91,8 @@ state.Dependency = FlowField.BuildFlow(field, goalsQuery, in flowGoalHandles)
     .ScheduleParallel(out var flow, state.WorldUpdateAllocator, state.Dependency);
 ```
 
+Alternatively, `FlowField.BuildFlow(in Field field, NativeArray<float3> goalPositions)` takes explicit world-space goal positions instead of goal entities. The positions array must stay valid until the scheduled jobs complete.
+
 #### Step 3: FlowField.AgentsDirections(EntityQuery agentsQuery, in FlowFieldAgentsTypeHandles handles, float deltaTime)
 
 Once the `Field` and `Flow` are ready, directions can be calculated for each agent.
@@ -102,6 +104,8 @@ state.Dependency = FlowField.AgentsDirections(agentsQuery, handles, SystemAPI.Ti
     .ScheduleParallel(field, flow, state.Dependency);
 state.Dependency = new YourAgentsMovementJob().ScheduleParallel(state.Dependency);
 ```
+
+If you drive agents with your own steering instead, `flow.SampleDirection(in field, worldPosition)` returns a density-attenuated world-space xz direction at any position — no agent components required.
 
 ##### For convenience there is a `FlowFieldAgentAuthoring`, which will bake all the necessary components on the agent.
 `FlowFieldAgentAuthoring` has the following settings: 

@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic
 Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-7-21
+
+- Added `FlowField.BuildFlow` overload taking explicit world-space goal positions instead of a goals query
+- Added `Flow.SampleDirection` extension for sampling a density-attenuated flow direction at a world position
+
 ## [0.2.2] - 2026-3-9
 
 - Improved agent direction determination algorithm for more natural crowd behavior

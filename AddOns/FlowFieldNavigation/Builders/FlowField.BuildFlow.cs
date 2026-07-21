@@ -21,6 +21,16 @@ namespace Latios.FlowFieldNavigation
     }
 
     /// <summary>
+    /// Configuration structure for building a navigation flow from explicit goal positions.
+    /// </summary>
+    public struct BuildFlowFromPositionsConfig
+    {
+        internal FlowSettings FlowSettings;
+        internal Field Field;
+        internal NativeArray<float3> GoalPositions;
+    }
+
+    /// <summary>
     /// Configuration structure for updating an existing flow.
     /// </summary>
     public struct UpdateFlowConfig { }
@@ -46,7 +56,17 @@ namespace Latios.FlowFieldNavigation
         /// <returns>New flow configuration</returns>
         public static BuildFlowConfig BuildFlow(in Field field, EntityQuery goalsQuery, in FlowGoalTypeHandles requiredTypeHandles) =>
             new() { Field = field, FlowSettings = FlowSettings.Default, GoalsQuery = goalsQuery, TypeHandles = requiredTypeHandles };
-       
+
+        /// <summary>
+        /// Creates a flow configuration whose goals are explicit world positions instead of goal
+        /// entities. Each position marks a single goal cell.
+        /// </summary>
+        /// <param name="field">Existing navigation field to build upon</param>
+        /// <param name="goalPositions">World-space goal positions; must stay valid until the scheduled jobs complete</param>
+        /// <returns>New flow configuration</returns>
+        public static BuildFlowFromPositionsConfig BuildFlow(in Field field, NativeArray<float3> goalPositions) =>
+            new() { Field = field, FlowSettings = FlowSettings.Default, GoalPositions = goalPositions };
+
         /// <summary>
         /// Creates configuration for updating an existing flow.
         /// Use this when field and goals haven't changed but agents have moved.
@@ -63,6 +83,18 @@ namespace Latios.FlowFieldNavigation
         /// <param name="settings">New flow settings</param>
         /// <returns>Modified configuration</returns>
         public static BuildFlowConfig WithSettings(this BuildFlowConfig config, FlowSettings settings)
+        {
+            config.FlowSettings = settings;
+            return config;
+        }
+
+        /// <summary>
+        /// Sets custom flow settings for the configuration.
+        /// </summary>
+        /// <param name="config">Configuration to modify</param>
+        /// <param name="settings">New flow settings</param>
+        /// <returns>Modified configuration</returns>
+        public static BuildFlowFromPositionsConfig WithSettings(this BuildFlowFromPositionsConfig config, FlowSettings settings)
         {
             config.FlowSettings = settings;
             return config;
@@ -219,6 +251,84 @@ namespace Latios.FlowFieldNavigation
         }
         
         /// <summary>
+        /// Schedules parallel jobs to build a new navigation flow from explicit goal positions.
+        /// </summary>
+        /// <param name="config">Flow configuration</param>
+        /// <param name="flow">Output flow that will be created</param>
+        /// <param name="allocator">Memory allocator for flow data</param>
+        /// <param name="inputDeps">Optional input job dependencies</param>
+        /// <returns>JobHandle representing all scheduled jobs</returns>
+        public static JobHandle ScheduleParallel(this BuildFlowFromPositionsConfig config, out Flow flow, AllocatorManager.AllocatorHandle allocator, JobHandle inputDeps = default)
+        {
+            config.ValidateSettings();
+
+            flow = new Flow(config.Field, config.FlowSettings, allocator);
+
+            var dependency = ScheduleCollectPositions(in config, in flow, inputDeps);
+            return ScheduleFlowSolve(config.Field, in flow, config.FlowSettings, parallel: true, dependency);
+        }
+
+        /// <summary>
+        /// Schedules single-threaded jobs to build a new navigation flow from explicit goal positions.
+        /// </summary>
+        /// <param name="config">Flow configuration</param>
+        /// <param name="flow">Output flow that will be created</param>
+        /// <param name="allocator">Memory allocator for flow data</param>
+        /// <param name="inputDeps">Optional input job dependencies</param>
+        /// <returns>JobHandle representing all scheduled jobs</returns>
+        public static JobHandle Schedule(this BuildFlowFromPositionsConfig config, out Flow flow, AllocatorManager.AllocatorHandle allocator, JobHandle inputDeps = default)
+        {
+            config.ValidateSettings();
+
+            flow = new Flow(config.Field, config.FlowSettings, allocator);
+
+            var dependency = ScheduleCollectPositions(in config, in flow, inputDeps);
+            return ScheduleFlowSolve(config.Field, in flow, config.FlowSettings, parallel: false, dependency);
+        }
+
+        static JobHandle ScheduleCollectPositions(in BuildFlowFromPositionsConfig config, in Flow flow, JobHandle dependency)
+        {
+            return new FlowFieldInternal.CollectGoalPositionsJob
+            {
+                Field = config.Field,
+                Positions = config.GoalPositions,
+                GoalCells = flow.GoalCells,
+            }.Schedule(dependency);
+        }
+
+        static JobHandle ScheduleFlowSolve(in Field field, in Flow flow, FlowSettings settings, bool parallel, JobHandle dependency)
+        {
+            dependency = new FlowFieldInternal.ResetJob
+            {
+                Costs = flow.Costs,
+                GoalCells = flow.GoalCells,
+                Width = field.Width
+            }.Schedule(dependency);
+
+            dependency = new FlowFieldInternal.CalculateCostsWavefrontJob
+            {
+                PassabilityMap = field.PassabilityMap,
+                Width = field.Width, Height = field.Height,
+                Costs = flow.Costs,
+                GoalCells = flow.GoalCells,
+            }.Schedule(dependency);
+
+            var directionJob = new FlowFieldInternal.CalculateDirectionJob
+            {
+                Settings = settings,
+                DirectionMap = flow.DirectionMap,
+                CostField = flow.Costs,
+                DensityField = field.DensityMap,
+                Width = field.Width,
+                Height = field.Height,
+            };
+
+            return parallel
+                ? directionJob.ScheduleParallel(flow.DirectionMap.Length, 32, dependency)
+                : directionJob.Schedule(flow.DirectionMap.Length, dependency);
+        }
+
+        /// <summary>
         /// Schedules single-threaded jobs to update an existing flow's directions.
         /// </summary>
         /// <param name="config">Update configuration</param>
@@ -258,6 +368,15 @@ namespace Latios.FlowFieldNavigation
         {
             if (!config.Field.IsCreated)
                 throw new InvalidOperationException("BuildFlow: Field is not created");
+        }
+
+        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
+        static void ValidateSettings(this BuildFlowFromPositionsConfig config)
+        {
+            if (!config.Field.IsCreated)
+                throw new InvalidOperationException("BuildFlow: Field is not created");
+            if (!config.GoalPositions.IsCreated)
+                throw new InvalidOperationException("BuildFlow: GoalPositions array is not created");
         }
 
         #endregion

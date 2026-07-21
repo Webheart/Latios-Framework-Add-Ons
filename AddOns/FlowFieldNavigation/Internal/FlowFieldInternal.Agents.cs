@@ -53,7 +53,7 @@ namespace Latios.FlowFieldNavigation
             }
         }
 
-        static float2 SampleFlowBilinear(float3 worldPos, in Field field, in Flow flow)
+        internal static float2 SampleFlowBilinear(float3 worldPos, in Field field, in Flow flow)
         {
             WorldToGridFrac(worldPos, in field, out var cellMin, out var frac);
 
@@ -78,7 +78,7 @@ namespace Latios.FlowFieldNavigation
             return direction * speedFactor;
         }
 
-        static float SampleDensityBilinear(float3 worldPos, in Field field)
+        internal static float SampleDensityBilinear(float3 worldPos, in Field field)
         {
             WorldToGridFrac(worldPos, in field, out var cellMin, out var frac);
 

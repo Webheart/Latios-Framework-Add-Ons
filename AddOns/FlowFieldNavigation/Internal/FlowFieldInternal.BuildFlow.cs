@@ -49,6 +49,24 @@ namespace Latios.FlowFieldNavigation
         }
 
         [BurstCompile]
+        internal struct CollectGoalPositionsJob : IJob
+        {
+            [ReadOnly] internal Field Field;
+            [ReadOnly] internal NativeArray<float3> Positions;
+
+            internal NativeHashSet<int2> GoalCells;
+
+            public void Execute()
+            {
+                foreach (var position in Positions)
+                {
+                    if (Field.TryWorldToCell(position, out var cell))
+                        GoalCells.Add(cell);
+                }
+            }
+        }
+
+        [BurstCompile]
         internal struct CalculateCostsWavefrontJob : IJob
         {
             [ReadOnly] internal NativeArray<int> PassabilityMap;
