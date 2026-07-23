@@ -149,6 +149,9 @@ namespace Latios.FlowFieldNavigation
                 var chunkFootprints = chunk.GetNativeArray(ref TypeHandles.AgentFootprint);
                 var chunkDensities = chunk.GetNativeArray(ref TypeHandles.AgentDensity);
 
+                var tileCapacity = FlowSettings.MaxFootprintSize + 1;
+                var tile = new NativeArray<float>(tileCapacity * tileCapacity, Allocator.Temp);
+
                 var enumerator = new ChunkEntityEnumerator(useEnabledMask, chunkEnabledMask, chunk.Count);
 
                 while (enumerator.NextEntityIndex(out var i))
@@ -158,32 +161,50 @@ namespace Latios.FlowFieldNavigation
                     var velocity = chunkVelocities[i].Value;
                     var densityData = chunkDensities[i];
 
-                    if (!Field.TryWorldToFootprint(position, footprintSize, out var footprint)) continue;
+                    if (!Field.TryWorldToFootprint(position, footprintSize, out _)) continue;
 
-                    var minCell = footprint.xy;
-                    var maxCell = footprint.zw;
+                    WorldToGridFrac(position, in Field, out var cellMin, out var frac);
+                    var samplePos = (float2)cellMin + frac;
+                    var halfSpread = (footprintSize - 1) * 0.5f;
                     var radius = footprintSize / 2f;
                     var radiusSq = radius * radius;
+                    var tileSize = footprintSize + 1;
+                    var tileOrigin = cellMin + (int2)math.floor(frac - halfSpread);
 
-                    for (var x = minCell.x; x <= maxCell.x; x++)
-                    for (var y = minCell.y; y <= maxCell.y; y++)
+                    for (var py = 0; py < footprintSize; py++)
+                    for (var px = 0; px < footprintSize; px++)
                     {
-                        var cell = new int2(x, y);
-                        if (!Field.IsValidCell(cell)) continue;
-
-                        var cellCenter = Field.CellToWorld(cell);
-
-                        var distanceSq = math.distancesq(position.xz, cellCenter.xz);
+                        var offset = new float2(px, py) - halfSpread;
+                        var distanceSq = math.lengthsq(offset * Field.CellSize);
                         if (distanceSq > radiusSq) continue;
 
-                        var normalizedDistance = distanceSq / radiusSq;
-                        var t = 1 - normalizedDistance;
+                        var t = 1 - distanceSq / radiusSq;
                         var weight = math.lerp(densityData.MinWeight, densityData.MaxWeight, t * t);
 
-                        var index = Field.CellToIndex(cell);
+                        var probePos = samplePos + offset;
+                        var probeBase = (int2)math.floor(probePos);
+                        var probeFrac = probePos - probeBase;
+                        var local = probeBase - tileOrigin;
+
+                        tile[local.y * tileSize + local.x]           += (1 - probeFrac.x) * (1 - probeFrac.y) * weight;
+                        tile[local.y * tileSize + local.x + 1]       += probeFrac.x * (1 - probeFrac.y) * weight;
+                        tile[(local.y + 1) * tileSize + local.x]     += (1 - probeFrac.x) * probeFrac.y * weight;
+                        tile[(local.y + 1) * tileSize + local.x + 1] += probeFrac.x * probeFrac.y * weight;
+                    }
+
+                    for (var ty = 0; ty < tileSize; ty++)
+                    for (var tx = 0; tx < tileSize; tx++)
+                    {
+                        var weight = tile[ty * tileSize + tx];
+                        if (weight <= 0) continue;
+
+                        tile[ty * tileSize + tx] = 0;
+                        var cell = tileOrigin + new int2(tx, ty);
+                        if (!Field.IsValidCell(cell)) continue;
+
                         Stream.Write(new AgentInfluenceData
                         {
-                            Index = index,
+                            Index = Field.CellToIndex(cell),
                             Velocity = velocity,
                             Weight = weight,
                         }, threadIndex);
@@ -215,7 +236,7 @@ namespace Latios.FlowFieldNavigation
                     var current = enumerator.GetCurrentAsRef<AgentInfluenceData>();
                     var index = current.Index;
                     var density = DensityMap[index] + current.Weight;
-                    var totalVelocity = MeanVelocityMap[index] + current.Velocity;
+                    var totalVelocity = MeanVelocityMap[index] + current.Velocity * current.Weight;
                     var totalCount = UnitsCountMap[index] + 1;
                     DensityMap[index] = math.min(density, FlowSettings.MaxDensity);
                     MeanVelocityMap[index] = totalVelocity;

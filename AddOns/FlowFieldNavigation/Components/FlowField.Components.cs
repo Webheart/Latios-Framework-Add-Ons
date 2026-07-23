@@ -20,6 +20,10 @@ namespace Latios.FlowFieldNavigation
             public int Size;
         }
         
+        /// <summary>
+        /// Density stamp weights: the radial profile falls off from MaxWeight at the agent position
+        /// to MinWeight at the footprint rim. A 1-cell footprint contributes plain MaxWeight.
+        /// </summary>
         public struct AgentDensity : IComponentData
         {
             public float MinWeight;

@@ -64,9 +64,7 @@ namespace Latios.FlowFieldNavigation
 
             var dx0 = math.lerp(d00, d10, frac.x);
             var dx1 = math.lerp(d01, d11, frac.x);
-            var result = math.lerp(dx0, dx1, frac.y);
-
-            return math.normalizesafe(result) * math.length(result);
+            return math.lerp(dx0, dx1, frac.y);
         }
 
         static float2 SampleCell(int2 cell, in Field field, in Flow flow)

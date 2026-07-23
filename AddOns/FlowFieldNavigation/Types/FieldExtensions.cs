@@ -31,16 +31,17 @@ namespace Latios.FlowFieldNavigation
         public static float GetSpeedFactor(this Field field, int index)
         {
             var density = field.GetDensity(index);
-            var velocity = field.MeanVelocityMap[index];
-            var count = field.UnitsCountMap[index];
-            var speed = math.length(velocity / count);
+            if (density < math.EPSILON)
+                return 1;
+
+            var speed = math.length(field.MeanVelocityMap[index] / density);
             return math.lerp(1, math.saturate(speed), math.saturate(density / FlowSettings.MaxDensity));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float GetDensity(this Field field, int index)
         {
-            return math.select(field.DensityMap[index], 0, field.UnitsCountMap[index] <= 1);
+            return field.DensityMap[index];
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

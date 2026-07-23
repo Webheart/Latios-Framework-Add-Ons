@@ -77,7 +77,7 @@ Here you need to provide a `EntityQuery` and type handles for the entities that 
 If using a `FluentQuery`, you can ensure correctness by calling  `PatchQueryForBuildingFlowGoals()` in the `FluentQuery` chain.
 Otherwise, the query must contain the following components: `FlowField.Goal` and `WorldTransform`.
 
-##### WithSettings(FlowSettings settings) - Provide settings such as the influence of crowd density on agent movement directions.
+##### WithSettings(FlowSettings settings) - Provide settings such as the influence of crowd density on agent movement directions and the arrival band width around goals.
 
 ##### Schedule/ScheduleParallel(out Flow flow, AllocatorManager.AllocatorHandle allocator, JobHandle inputDeps = default)
 

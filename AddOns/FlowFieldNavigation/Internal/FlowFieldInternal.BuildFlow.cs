@@ -212,7 +212,12 @@ namespace Latios.FlowFieldNavigation
                 AccumulateGradient(index, cellX, cellY, 2, -1, new float2(-1, 0), current, densityInfluence, ref gradient);
                 AccumulateGradient(index, cellX, cellY, 3, 1, new float2(1, 0), current, densityInfluence, ref gradient);
 
-                DirectionMap[index] = math.normalizesafe(-gradient);
+                var strength = math.saturate(math.length(gradient) / FlowSettings.FullStrengthGradient);
+
+                if (Settings.ArrivalBand > 0)
+                    strength *= math.saturate(currentCost / Settings.ArrivalBand);
+
+                DirectionMap[index] = math.normalizesafe(-gradient) * strength;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

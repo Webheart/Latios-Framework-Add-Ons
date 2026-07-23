@@ -6,10 +6,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic
 Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [0.3.0] - 2026-7-21
+## [0.3.0] - 2026-7-23
 
 - Added `FlowField.BuildFlow` overload taking explicit world-space goal positions instead of a goals query
 - Added `Flow.SampleDirection` extension for sampling a density-attenuated flow direction at a world position
+- Added `FlowSettings.ArrivalBand` - flow strength fades within the given wavefront-cost band around goals, so approaching agents settle gradually; 0 disables
+- Flow directions now scale with the potential-gradient magnitude: near-flat areas (settled crowds) fade toward zero instead of emitting full-strength jitter
+- Agent density stamps are sampled on an agent-locked lattice and splatted bilinearly, so stamps move continuously instead of popping across cell boundaries
+- Removed the single-occupant density cutoff; a cell's mean crowd velocity is now density-weighted
 
 ## [0.2.2] - 2026-3-9
 
